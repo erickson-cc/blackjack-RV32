@@ -19,3 +19,5 @@ J: 4,
 Q: 4,
 K: 4
 }
+
+Use registradores para valores temporários e a memória para administrar as cartas do baralho e máquina de estados.
