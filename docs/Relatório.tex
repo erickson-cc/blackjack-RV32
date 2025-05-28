@@ -1,0 +1,45 @@
+\documentclass[ ]{article}
+\usepackage[ ]{indentfirst}
+\usepackage[ ]{helvet}
+\usepackage[ ]{xcolor}
+\usepackage[ ]{listings}
+
+\lstset{
+	tabsize = 4,
+	breaklines=true,
+	backgroundcolor= \color{lightgray},
+}
+\begin{document}
+	\section{Lógica de Cartas}
+	O baralho do jogo foi declarado na memória usando a diretiva \textit{.byte}. Isso facilita no manuseio do baralho pois cada carta possui 3 informações intrínsecas: seu número, seu valor e sua quantidade. 
+	
+	Dessa forma, o valor da carta estará no espaço de memória dedicado ao rótulo \textit{baralho\_valores}, a quantidade de cartas estará no espaço de memória dedicado ao rótulo \textit{baralho\_qtd } e o número da carta será dado de acordo com o índice em ambos os espaços.
+	
+	
+	\begin{lstlisting}
+.data	0x10010000
+baralho_qtd:
+	.byte	4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
+baralho_valores:
+	.byte	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10
+	\end{lstlisting}
+	
+	Para acessar uma determinada carta sorteia-se um índice de 0 a 12, e, a partir do espaço de memória \textit{baralho\_qtd} endereçado no registrador $t0$, verifica se a quantidade é maior que 0 e decrementa esse valor. 
+	\begin{lstlisting}
+sortear:
+	li a0, 0
+	li a1, 13
+	li a7, 42
+	ecall
+
+	add t1, t0, a0
+	lb t2, 0(t1) 
+	beqz t2, sortear 
+	
+
+	addi t2, t2, -1
+	sb t2, 0(t1) 
+	ret
+	\end{lstlisting}
+	\textbf{Falta implementar uma lógica parecida com o \textit{baralho\_valores}}
+\end{document}
