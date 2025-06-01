@@ -3,25 +3,30 @@ baralho_qtd:		.byte	4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
 baralho_valores:	.byte	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10
 inicio_instr:		.string "Bem-vindo(a) ao Blackjack!\nDigite 1 para iniciar:\nDigite 0 para encerrar:\n"
 
-escolha:		.string	"Digite 1 para pedir mais uma carta ou 0 para parar a jogada.\n"
-vez_do_dealer:		.string "Vez do dealer."
-player_stand_txt:	.string "Player encerra sua jogada com a mão: "	
+escolha:		.string	"\nDigite 1 para pedir mais uma carta ou 0 para parar a jogada.\n"
+vez_do_dealer:		.string "\nVez do dealer."
+player_stand_txt:	.string "\nPlayer encerra sua jogada com a mão: "	
 
-mostra_mao_1:		.string	"Sua mão contém as cartas: "
+mostra_mao_1:		.string	"\nSua mão contém as cartas: "
 mostra_mao_2:		.string " + "
 mostra_mao_3:		.string	"= "
 
-player_recebe:		.string "Player recebe: "
-dealer_recebe:		.string "Dealer recebe: "
-dealer_esconde:		.string "Dealer recebe uma carta."
+player_recebe:		.string "\nPlayer recebe: "
+dealer_recebe:		.string "\nDealer recebe: "
+dealer_esconde:		.string "\nDealer esconde uma carta."
+
+dealer_encerra:		.string "\nDealer encerra sua jogada."
+
+total_cartas:		.string "\nTotal de Cartas: "
+placar:			.string "\nPontuação: "
+placar_player:		.string "\n	Player: "
+placar_dealer:		.string "\n	Dealer: "
 
 
-
-
-
-teste_valores:		.string	"A carta de número "
+teste_valores:		.string	"\nA carta de número "
 teste_qtd:		.string	" existe em quantidade: "
 .text		0x400000
+	li s4, 16 # usado para o dealer encerrar a jogada 
 	li s9, 52 # usado como count do teste
 	li s11, 1# Define o valor 1 para o registrador s11, usado para manusear escolhas
 	j inicio
@@ -56,11 +61,11 @@ sortear:
 
 inicio:	
 	#esses tres abaixo vão ser movidos para outro estado
-	call dar_carta
-	call sortear
-	call imprimir_teste
-	addi s9, s9, -1
-	bne s9, zero, inicio
+#	call dar_carta
+#	call sortear
+#	call imprimir_teste
+#	addi s9, s9, -1
+#	bne s9, zero, inicio
 	#
 	#Fim dos testes, interface começa aqui
 	la a0, inicio_instr
@@ -79,21 +84,21 @@ player_recebe_1:
 	ecall
 	#
 	# incluir lógica de receber carta aqui (talvez um JAL)
-	#imprime quebra de linha (ASCII 10)
-	li a0, 10
-	li a7, 11
-	ecall
 
 player_recebe_2:
 	# Adicionar carta a player.mao
 	la a0, player_recebe
 	li a7, 4
 	ecall
-	# incluir lógica de receber carta aqui (talvez um JAL)
-		#imprime quebra de linha (ASCII 10)
-		li a0, 10
-		li a7, 11
-		ecall
+#	# incluir lógica de receber carta aqui (talvez um JAL)
+
+dealer_recebe_1:
+	la a0, dealer_recebe
+	ecall
+
+dealer_recebe_2:
+	la a0, dealer_esconde
+	ecall
 	j player_escolha
 
 player_hit:
@@ -102,10 +107,6 @@ player_hit:
 	li a7, 4
 	ecall
 	# incluir lógica de receber carta aqui (talvez um JAL)
-		#imprime quebra de linha (ASCII 10)
-		li a0, 10
-		li a7, 11
-		ecall
 
 player_escolha:
 	la a0, escolha
@@ -119,10 +120,28 @@ player_stand:
 	la a0, player_stand_txt
 	li a7, 4
 	ecall
+	la a0, vez_do_dealer
+	ecall
 	j dealer_escolha
 
 dealer_escolha:
-	la a0, vez_do_dealer
+	#bgt x5, s4, dealer_stand #x5 vai ser o registrador da pontuação do dealer
+	j dealer_hit
+
+dealer_hit:
+	# call sortear
+	# Adicionar carta a dealer.mao
+	la a0, dealer_recebe
+	li a7, 4
+	ecall
+	# incluir lógica de receber carta aqui (talvez um JAL)
+	j end
+
+dealer_stand:
+	la a0, dealer_encerra
+	li a7, 4
+	ecall
+	j end
 
 end:
 	li a7, 10
