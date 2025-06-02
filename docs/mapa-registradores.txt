@@ -6,8 +6,8 @@ tp:
 t0: address baralho_qtd / mover para um registrador sx
 t1: address baralho_qtd + index carta
 t2: valor em baralho_qtd[t1]
-s0/fp:
-s1:
+s0/fp: somatório jogador
+s1: somatório dealer
 a0: syscalls arguments
 a1: syscalls arguments
 a2:
@@ -16,19 +16,19 @@ a4:
 a5:
 a6:
 a7: syscalls
-s2:
-s3:
+s2: contador de cartas player
+s3: contador de cartas dealer
 s4: imm 16 (usado para o dealer encerrar a jogada)
-s5:
-s6:
+s5: $cartas_player
+s6: $cartas_dealer
 s7:
 s8: índice sorteado para imprimir o teste / podemos remover
 s9: imm 52 (usado como count do teste) / podemos remover
 s10:
 s11: imm 1 (usado para fazer comparação dos comandos)
-t3:
-t4:
-t5:
+t3: address baralho_valor
+t4: address baralho_valor + index carta
+t5: valor em baralho_valor[t4]
 t6: comando (0/1) / mover para um registrador ax
 
 t->temporary
