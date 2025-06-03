@@ -44,6 +44,7 @@ empate_txt:		.string "\nOs jogadores empataram"
 	la s5, cartas_player
 	la s6, cartas_dealer
 	li s9, 52 # usado como count do teste
+	li s10, 21
 	li s11, 1# Define o valor 1 para o registrador s11, usado para manusear escolhas
 	j inicio
 
@@ -76,6 +77,22 @@ sortear:
 	# Adiciona o valor de baralho_valores[t1] em t5
 	add t4, t3, a0 # t4 = $baralho_valores+index
 	lb t5, 0(t4) # t5 = valor em baralho_valores[t4]
+	ret
+
+valor_do_as: # falta fazer o call
+	la a2, cartas_player
+	lb a3, 0(a2)
+	bne a3, s11, nao_e_um_as
+	# comparar se o as valendo 11 ultrapassa 21 e substituir caso não
+	addi a3, a3, 10
+	add s7, a3, s0
+	bgt s7, s10, super_as_ultrapassa
+	sb a3, 0(a2) # Talvez remover essa parte, pois o 1 é uma carta e pode valer 11
+	addi s0, s0, 10 # Adiciona o somatório
+super_as_ultrapassa:
+nao_e_um_as:
+	addi a2, a2, 1
+	blt a2, s5, valor_do_as
 	ret
 
 dar_carta_jogador:
@@ -170,6 +187,7 @@ player_hit:
 	li a7, 1
 	ecall
 	jal mostrar_mao
+	bgt s0, s10, dealer_venceu
 	#
 player_escolha:
 	la a0, escolha
