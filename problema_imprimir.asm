@@ -49,7 +49,6 @@ empate_txt:		.string "\nOs jogadores empataram"
 
 escolha_comando:
 	# Solicita input do comando
-	li a0, 0
 	li a7, 5
 	ecall
 	mv t6, a0
@@ -212,7 +211,7 @@ dealer_stand:
 	j compara
 
 mostrar_mao:
-	la t1, cartas_player ## pensar num registrador melhor pois já é usado para cartas_baralho[id]
+	la s5, cartas_player
 	li a3, 0	# a0 = indice (contador)
 	mv a4, s2 	# a4 número de cartas do jogador
 	#
@@ -221,18 +220,17 @@ mostrar_mao:
 	ecall
 imprimir_loop:
 	beq a3, a4, imprimir_fim
-	add t2, t1, a3 #a5 = endereço de cartas-jogador[a3]
-	#addi a3, a3, 1
-	lb a0, 0(t2) # a6 = índice da carta
+	add a5, s5, a3 #a5 = endereço de cartas-jogador[a3]
+	addi a3, a3, 1
+	lb a6, 0(a5) # a6 = índice da carta
 	
-	#la t3, baralho_valores # base de baralho_valor
-	#add a6, t3, a6
-	lb a0, 0(t2)
-	#addi a0, a0, -1
+	la t3, baralho_valores # base de baralho_valor
+	add a6, t3, a6
+	lb a0, 0(a6)
+	addi a0, a0, -1
 	li a7, 1
 	ecall
 	# imprime + se não for a última carta
-	addi a3, a3, 1
 	blt a3, a4, imprimir_sinal_mais
 	j imprimir_loop
 imprimir_sinal_mais:
