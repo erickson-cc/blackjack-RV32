@@ -3,7 +3,7 @@ baralho_qtd:		.byte	4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
 baralho_valores:	.byte	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10
 cartas_player:		.space 20
 cartas_dealer:		.space 20
-inicio_instr:		.string "Bem-vindo(a) ao Blackjack!\nDigite 1 para iniciar:\nDigite 0 para encerrar:\n"
+inicio_instr:		.string "\n\nBem-vindo(a) ao Blackjack!\nDigite 1 para iniciar:\nDigite 0 para encerrar:\n"
 
 escolha:		.string	"\nDigite 1 para pedir mais uma carta ou 0 para parar a jogada.\n"
 vez_do_dealer:		.string "\nVez do dealer."
@@ -11,7 +11,7 @@ player_stand_txt:	.string "\nPlayer encerra sua jogada com a mão: "
 
 mostra_mao_1:		.string	"\nSua mão contém as cartas: "
 mostra_mao_2:		.string " + "
-mostra_mao_3:		.string	"= "
+mostra_mao_3:		.string	" = "
 
 player_recebe:		.string "\nPlayer recebe: "
 dealer_recebe:		.string "\nDealer recebe: "
@@ -23,10 +23,16 @@ total_cartas:		.string "\nTotal de Cartas: "
 placar:			.string "\nPontuação: "
 placar_player:		.string "\n	Player: "
 placar_dealer:		.string "\n	Dealer: "
+player_pontos:		.word	0
+dealer_pontos:		.word	0
 
 
 teste_valores:		.string	"\nA carta de número "
 teste_qtd:		.string	" existe em quantidade: "
+
+venceu_txt:		.string "\nPlayer venceu"
+perdeu_txt:		.string "\nDealer venceu"
+empate_txt:		.string "\nOs jogadores empataram"
 .text		0x400000
 	li s0, 0 # Somatório jogador
 	li s1, 0 # Somatório dealer
@@ -144,7 +150,11 @@ dealer_recebe_2:
 	la a0, dealer_esconde
 	li a7, 4
 	ecall
-	jal mostra_mao
+	# imprimir um \n para embelezar
+	li a0, 10
+	li a7, 11
+	ecall
+	#
 	j player_escolha
 
 player_hit:
@@ -154,12 +164,12 @@ player_hit:
 	la a0, player_recebe
 	li a7, 4
 	ecall
-	# incluir lógica de receber carta aqui (talvez um JAL)
+	#
 	mv a0, t5
 	li a7, 1
 	ecall
+	jal mostrar_mao
 	#
-	jal mostra_mao
 player_escolha:
 	la a0, escolha
 	li a7, 4
@@ -167,7 +177,8 @@ player_escolha:
 	jal escolha_comando
 	beq t6, zero, player_stand
 	beq t6, s11, player_hit
-	
+	j player_escolha
+
 player_stand:
 	la a0, player_stand_txt
 	li a7, 4
@@ -178,7 +189,7 @@ player_stand:
 
 dealer_escolha:
 	#bgt x5, s4, dealer_stand #x5 vai ser o registrador da pontuação do dealer
-	j dealer_hit
+	bgt s1, s4, dealer_stand
 
 dealer_hit:
 	jal sortear
@@ -191,56 +202,38 @@ dealer_hit:
 	li a7, 1
 	ecall
 	# incluir lógica de receber carta aqui (talvez um JAL)
-	j end
-
+	j dealer_escolha
 dealer_stand:
 	la a0, dealer_encerra
 	li a7, 4
 	ecall
-	j end
+	#	
+	j compara
 
-placar_jogo:
-	la a0, total_cartas
-	li a7, 4
-	ecall
-        la a0, placar  
-	li a7, 4
-	ecall
-        la a0, placar_player
-	li a7, 4
-	ecall
-        la a0, placar_dealer
-	li a7, 4
-	ecall
-	li a0, 10
-	li a7, 11
-	ecall
-	ret
-
-mostra_mao:
-	### Essa função ficou mal-feita, vou otimizar amanhã depois do trabalho
-	la a0, cartas_player
-	li a2, 0 # contador
-	mv a3, s2 # número de cartas player
+mostrar_mao:
+	la s5, cartas_player
+	li a3, 0	# a0 = indice (contador)
+	mv a4, s2 	# a4 número de cartas do jogador
 	#
 	la a0, mostra_mao_1
 	li a7, 4
 	ecall
-	#
 imprimir_loop:
-	beq a2, a3, imprimir_fim
-	add a4, a0, a2
-	lb s5, 0(a4)
-	la t3, baralho_valores# dá pra tirar
-	add a5, t3, s5
-	lb a0, 0(a5) # valor da carta
-	li a7,1
+	beq a3, a4, imprimir_fim
+	add a5, s5, a3 #a5 = endereço de cartas-jogador[a3]
+	addi a3, a3, 1
+	lb a6, 0(a5) # a6 = índice da carta
+	
+	la t3, baralho_valores # base de baralho_valor
+	add a6, t3, a6
+	lb a0, 0(a6)
+	addi a0, a0, -1
+	li a7, 1
 	ecall
-	#
-	addi a2, a2, 1
-	blt a2, a4, imprimir_mais
+	# imprime + se não for a última carta
+	blt a3, a4, imprimir_sinal_mais
 	j imprimir_loop
-imprimir_mais:
+imprimir_sinal_mais:
 	la a0, mostra_mao_2
 	li a7, 4
 	ecall
@@ -249,8 +242,92 @@ imprimir_fim:
 	la a0, mostra_mao_3
 	li a7, 4
 	ecall
+	mv a0, s0
+	li a7, 1
+	ecall
+	ret
+compara:
+	beq s0, s1, empate
+	bgt s0,s1, player_venceu
+	j dealer_venceu
+
+empate:
+	la a0, empate_txt
+	li a7, 4
+	ecall
+	j end
+player_venceu:
+	la a0, venceu_txt
+	li a7, 4
+	ecall
+	la a0, player_pontos
+	lb a2, 0(a0)
+	addi a2, a2, 1
+	sb a2, 0(a0)
+	j inicio
+dealer_venceu:
+	la a0, perdeu_txt
+	li a7, 4
+	ecall
+	la a0, dealer_pontos
+	lb a2, 0(a0)
+	addi a2, a2, 1
+	sb a2, 0(a0)
+	j inicio
+
+placar_jogo:
+	la a0, total_cartas
+	li a7, 4
+	ecall
+	# Incluir em algum registrador um count com o total de cartas
+	j total_cartas_num
+total_cartas_return:
+        la a0, placar  
+	li a7, 4
+	ecall
+        la a0, placar_player
+	li a7, 4
+	ecall
+	#
+	la a0, player_pontos
+	lb a2, 0(a0)
+	mv a0, a2
+	li a7, 1
+	ecall
+	#
+        la a0, placar_dealer
+	li a7, 4
+	ecall
+	#
+	la a0, dealer_pontos
+	lb a2, 0(a0)
+	mv a0, a2
+	li a7, 1
+	ecall
+	#
+	li a0, 10
+	li a7, 11
+	ecall
 	ret
 
+total_cartas_num:
+	la t0, baralho_qtd
+	li a2, 0 # a2 = índice (0 a 12)
+	li a3, 0 # a3 = soma total
+	li a4, 13 # a4 = tamanho do vetor do baralho
+	#
+total_cartas_loop:
+	beq a2, a4, total_cartas_fim	# se o índice == tamanho do vetor
+	add a5, t0, a2			# a5 = endereço do baralho_qtd[a2]
+	lb a6, 0(a5)			# a6 = valor em baralho[a2]
+	add a3, a3, a6
+	addi a2, a2, 1
+	j total_cartas_loop
+total_cartas_fim:
+	mv a0, a3
+	li a7, 1
+	ecall
+	j total_cartas_return
 end:
 	li a7, 10
 	ecall
