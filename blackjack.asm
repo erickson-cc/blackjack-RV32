@@ -8,6 +8,7 @@ inicio_instr:		.string "\n\nBem-vindo(a) ao Blackjack!\nDigite 1 para iniciar:\n
 escolha:		.string	"\nDigite 1 para pedir mais uma carta ou 0 para parar a jogada.\n"
 vez_do_dealer:		.string "\nVez do dealer."
 player_stand_txt:	.string "\nPlayer encerra sua jogada com a mão: "	
+dealer_stand_txt:	.string "\nDealer encerra sua jogada com a mão: "	
 
 mostra_mao_1:		.string	"\nSua mão contém as cartas: "
 mostra_mao_2:		.string " + "
@@ -17,7 +18,7 @@ player_recebe:		.string "\nPlayer recebe: "
 dealer_recebe:		.string "\nDealer recebe: "
 dealer_esconde:		.string "\nDealer esconde uma carta."
 
-dealer_encerra:		.string "\nDealer encerra sua jogada."
+#dealer_encerra:		.string "\nDealer encerra sua jogada."
 
 total_cartas:		.string "\nTotal de Cartas: "
 placar:			.string "\nPontuação: "
@@ -202,7 +203,13 @@ player_stand:
 	la a0, player_stand_txt
 	li a7, 4
 	ecall
+	#
+	mv a0, s0
+	li a7, 1
+	ecall
+	#
 	la a0, vez_do_dealer
+	li a7, 4
 	ecall
 	j dealer_escolha
 
@@ -223,8 +230,12 @@ dealer_hit:
 	# incluir lógica de receber carta aqui (talvez um JAL)
 	j dealer_escolha
 dealer_stand:
-	la a0, dealer_encerra
+	la a0, dealer_stand_txt
 	li a7, 4
+	ecall
+	#
+	mv a0, s1
+	li a7, 1
 	ecall
 	#	
 	j compara
