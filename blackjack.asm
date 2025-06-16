@@ -90,7 +90,9 @@ valor_do_as: # falta fazer o call
 	bgt s7, s10, super_as_ultrapassa
 	sb a3, 0(a2) # Talvez remover essa parte, pois o 1 é uma carta e pode valer 11
 	addi s0, s0, 10 # Adiciona o somatório
-super_as_ultrapassa:
+	# j nao_e_um_as
+
+super_as_ultrapassa: # Rótulo inútil
 nao_e_um_as:
 	addi a2, a2, 1
 	blt a2, s5, valor_do_as
@@ -139,6 +141,7 @@ player_recebe_1:
 	ecall
 	#
 	# incluir lógica de receber carta aqui (talvez um JAL)
+	# j player_recebe_2
 
 player_recebe_2:
 	# Adicionar carta a player.mao
@@ -151,6 +154,7 @@ player_recebe_2:
 	mv a0, t5
 	li a7, 1
 	ecall
+	# j dealer_recebe_1
 
 dealer_recebe_1:
 	jal sortear
@@ -162,6 +166,7 @@ dealer_recebe_1:
 	mv a0, t5
 	li a7, 1
 	ecall
+	# j dealer_recebe_2
 
 dealer_recebe_2:
 	jal sortear
@@ -189,7 +194,8 @@ player_hit:
 	ecall
 	jal mostrar_mao
 	bgt s0, s10, dealer_venceu
-	#
+	# j playr_escolha
+
 player_escolha:
 	la a0, escolha
 	li a7, 4
@@ -248,6 +254,8 @@ mostrar_mao:
 	la a0, mostra_mao_1
 	li a7, 4
 	ecall
+	#j imprimir_loop
+
 imprimir_loop:
 	beq a3, a4, imprimir_fim
 	add t2, t1, a3 #a5 = endereço de cartas-jogador[a3]
@@ -312,7 +320,26 @@ placar_jogo:
 	ecall
 	# Incluir em algum registrador um count com o total de cartas
 	j total_cartas_num
-total_cartas_return:
+
+total_cartas_num:
+	la t0, baralho_qtd
+	li a2, 0 # a2 = índice (0 a 12)
+	li a3, 0 # a3 = soma total
+	li a4, 13 # a4 = tamanho do vetor do baralho
+	#j total_cartas_loop
+total_cartas_loop:
+	beq a2, a4, total_cartas_fim	# se o índice == tamanho do vetor
+	add a5, t0, a2			# a5 = endereço do baralho_qtd[a2]
+	lb a6, 0(a5)			# a6 = valor em baralho[a2]
+	add a3, a3, a6
+	addi a2, a2, 1
+	j total_cartas_loop
+total_cartas_fim:
+	mv a0, a3
+	li a7, 1
+	ecall
+	#j total_cartas_print
+total_cartas_print:
         la a0, placar  
 	li a7, 4
 	ecall
@@ -340,25 +367,6 @@ total_cartas_return:
 	li a7, 11
 	ecall
 	ret
-
-total_cartas_num:
-	la t0, baralho_qtd
-	li a2, 0 # a2 = índice (0 a 12)
-	li a3, 0 # a3 = soma total
-	li a4, 13 # a4 = tamanho do vetor do baralho
-	#
-total_cartas_loop:
-	beq a2, a4, total_cartas_fim	# se o índice == tamanho do vetor
-	add a5, t0, a2			# a5 = endereço do baralho_qtd[a2]
-	lb a6, 0(a5)			# a6 = valor em baralho[a2]
-	add a3, a3, a6
-	addi a2, a2, 1
-	j total_cartas_loop
-total_cartas_fim:
-	mv a0, a3
-	li a7, 1
-	ecall
-	j total_cartas_return
 end:
 	li a7, 10
 	ecall
