@@ -222,6 +222,7 @@ player_stand:
 dealer_escolha:
 	#bgt x5, s4, dealer_stand #x5 vai ser o registrador da pontuação do dealer
 	bgt s1, s4, dealer_stand
+	#j dealer_hit
 
 dealer_hit:
 	jal sortear
@@ -272,11 +273,13 @@ imprimir_loop:
 	addi a3, a3, 1
 	blt a3, a4, imprimir_sinal_mais
 	j imprimir_loop
+
 imprimir_sinal_mais:
 	la a0, mostra_mao_2
 	li a7, 4
 	ecall
 	j imprimir_loop
+
 imprimir_fim:
 	la a0, mostra_mao_3
 	li a7, 4
@@ -285,6 +288,7 @@ imprimir_fim:
 	li a7, 1
 	ecall
 	ret
+
 compara:
 	beq s0, s1, empate
 	bgt s0,s1, player_venceu
@@ -295,6 +299,7 @@ empate:
 	li a7, 4
 	ecall
 	j end
+
 player_venceu:
 	la a0, venceu_txt
 	li a7, 4
@@ -304,6 +309,7 @@ player_venceu:
 	addi a2, a2, 1
 	sb a2, 0(a0)
 	j inicio
+
 dealer_venceu:
 	la a0, perdeu_txt
 	li a7, 4
@@ -319,7 +325,7 @@ placar_jogo:
 	li a7, 4
 	ecall
 	# Incluir em algum registrador um count com o total de cartas
-	j total_cartas_num
+	j total_cartas_num # jump desnecessário
 
 total_cartas_num:
 	la t0, baralho_qtd
@@ -327,6 +333,7 @@ total_cartas_num:
 	li a3, 0 # a3 = soma total
 	li a4, 13 # a4 = tamanho do vetor do baralho
 	#j total_cartas_loop
+
 total_cartas_loop:
 	beq a2, a4, total_cartas_fim	# se o índice == tamanho do vetor
 	add a5, t0, a2			# a5 = endereço do baralho_qtd[a2]
@@ -334,11 +341,13 @@ total_cartas_loop:
 	add a3, a3, a6
 	addi a2, a2, 1
 	j total_cartas_loop
+
 total_cartas_fim:
 	mv a0, a3
 	li a7, 1
 	ecall
 	#j total_cartas_print
+
 total_cartas_print:
         la a0, placar  
 	li a7, 4
@@ -367,6 +376,7 @@ total_cartas_print:
 	li a7, 11
 	ecall
 	ret
+
 end:
 	li a7, 10
 	ecall
