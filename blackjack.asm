@@ -34,6 +34,12 @@ teste_qtd:		.string	" existe em quantidade: "
 venceu_txt:		.string "\nPlayer venceu"
 perdeu_txt:		.string "\nDealer venceu"
 empate_txt:		.string "\nOs jogadores empataram"
+
+A: 			.string "A"
+J:			.string "J"
+Q:			.string "Q"
+K:			.string "K"
+
 .text		0x400000
 	li s0, 0 # Somatório jogador
 	li s1, 0 # Somatório dealer
@@ -48,7 +54,20 @@ empate_txt:		.string "\nOs jogadores empataram"
 	li s10, 21
 	li s11, 1# Define o valor 1 para o registrador s11, usado para manusear escolhas
 	j inicio
-
+resetar_baralho_qtd:	
+	la t0, baralho_qtd
+	mv a2, t0
+	mv a3, t0
+	addi a3, a3, 12
+resetar_baralho_qtd_loop:
+	li a0, 4
+	sb a0, 0(a2)
+	addi a2, a2, 1
+	blt a2, a3, resetar_baralho_qtd_loop
+	
+	ret
+		
+	
 escolha_comando:
 	# Solicita input do comando
 	li a0, 0
@@ -58,7 +77,7 @@ escolha_comando:
 	ret
 
 sortear:
-	#la t0, baralho_qtd
+	la t0, baralho_qtd
 	#la t3, baralho_valores
 	# Sorteia o índice de 0-12
 	li a0, 0
@@ -75,9 +94,13 @@ sortear:
 	addi t2, t2, -1
 	sb t2, 0(t1) #--- Store
 	#
+	
 	# Adiciona o valor de baralho_valores[t1] em t5
-	add t4, t3, a0 # t4 = $baralho_valores+index
-	lb t5, 0(t4) # t5 = valor em baralho_valores[t4]
+	#add t4, t3, a0 # t4 = $baralho_valores+index
+	#lb t5, 0(t4) # t5 = valor em baralho_valores[t4]
+	#ret
+
+	mv t5, a0 # Agora passa a salvar o índice sorteado em t5 ao invés do valor
 	ret
 
 valor_do_as: # falta fazer o call
@@ -99,25 +122,39 @@ nao_e_um_as:
 	ret
 
 dar_carta_jogador:
-	add s0, s0, t5 # soma o valor da carta ao total do jogador
-	#
-	# Salvar a carta no vetor cartas_player *s5
+	# Valor da carta a partir do índice que está em t5:
+	add t4, t3, t5  # t3 = base de baralho_valores, t5 = índice
+	lb a2, 0(t4)    # a2 = valor da carta  OBSERVAÇÃO: Usado o a2 por falta de vetores temporários
+
+	add s0, s0, a2 # Soma no s0, somatório jogador
+
+	# Salvar o índice da carta (não o valor) no vetor cartas_player:
 	sb t5, 0(s5)
-	addi s5, s5, 1 #incrementa a próxima posição em cartas_player
-	addi s2, s2, 1 # incrementa o contado r de cartas do player
+	addi s5, s5, 1  # Avança uma posição no vetor
+	addi s2, s2, 1  # Incrementa o contador de cartas
 	ret
+
 	
 dar_carta_dealer:
-	add s1, s1, t5
-	#
-	# Salvar a carta no vetor cartas_dealer *s6
+	# Obter o valor real da carta:
+	add t4, t3, t5
+	lb a2, 0(t4)
+
+	# Soma o valor no total do dealer:
+	add s1, s1, a2
+
+	# Salvar o índice da carta no vetor cartas_dealer:
 	sb t5, 0(s6)
-	addi s6, s6, 1 # Somando 1 byte após adição no byte anterior (TESTAR)
+	addi s6, s6, 1
 	addi s3, s3, 1
 	ret
 
 inicio:	
-	#Fim dos testes, interface começa aqui
+	li s0, 0 # Somatório jogador = 0
+	li s1, 0 # Somatório dealer = 0
+	li s2, 0 # count player = 0
+	li s3, 0 # count dealer = 0
+	jal resetar_baralho_qtd
 	la a0, inicio_instr # Bem vindo ao BlackJack, digite 0/1
 	li a7, 4
 	ecall
@@ -136,6 +173,7 @@ player_recebe_1:
 	li a7, 4
 	ecall
 	#
+	addi t5, t5, 1 # incrementa o índice para se adequar ao número da carta
 	mv a0, t5
 	li a7, 1
 	ecall
@@ -151,6 +189,7 @@ player_recebe_2:
 	li a7, 4
 	ecall
 	#
+	addi t5, t5, 1 # incrementa o índice para se adequar ao número da carta
 	mv a0, t5
 	li a7, 1
 	ecall
@@ -163,6 +202,7 @@ dealer_recebe_1:
 	li a7, 4
 	ecall
 	#
+	addi t5, t5, 1 # incrementa o índice para se adequar ao número da carta
 	mv a0, t5
 	li a7, 1
 	ecall
@@ -189,6 +229,7 @@ player_hit:
 	li a7, 4
 	ecall
 	#
+	addi t5, t5, 1 # incrementa o índice para se adequar ao número da carta
 	mv a0, t5
 	li a7, 1
 	ecall
@@ -231,10 +272,12 @@ dealer_hit:
 	li a7, 4
 	ecall
 	#
+	addi t5, t5, 1 # incrementa o índice para se adequar ao número da carta
 	mv a0, t5
 	li a7, 1
 	ecall
-	# incluir lógica de receber carta aqui (talvez um JAL)
+	# Inserir um print avisando a soma da mão do dealer
+	bgt s1, s10, player_venceu
 	j dealer_escolha
 dealer_stand:
 	la a0, dealer_stand_txt
@@ -248,28 +291,44 @@ dealer_stand:
 	j compara
 
 mostrar_mao:
-	la t1, cartas_player ## pensar num registrador melhor pois já é usado para cartas_baralho[id]
-	li a3, 0	# a0 = indice (contador)
-	mv a4, s2 	# a4 número de cartas do jogador
-	#
+	la t1, cartas_player    # Base do vetor de cartas do jogador
+	li a3, 0                # Contador de cartas
+	mv a4, s2               # Total de cartas do jogador
+
+	# Print da mensagem inicial
 	la a0, mostra_mao_1
 	li a7, 4
 	ecall
-	#j imprimir_loop
 
 imprimir_loop:
 	beq a3, a4, imprimir_fim
-	add t2, t1, a3 #a5 = endereço de cartas-jogador[a3]
-	#addi a3, a3, 1
-	lb a0, 0(t2) # a6 = índice da carta
-	
-	#la t3, baralho_valores # base de baralho_valor
-	#add a6, t3, a6
-	lb a0, 0(t2)
-	#addi a0, a0, -1
+
+	# Pega o índice da carta na mão do jogador:
+	add t2, t1, a3
+	lb t0, 0(t2)            # t0 = índice da carta (ex: 0,1,2,...)
+
+	# Exibir o número da carta (exibe o índice direto ou consulta um vetor de strings)
+	# Por enquanto, só imprime o número puro como estava
+	# Se quiser melhorar depois, podemos usar um vetor de strings tipo "A", "2", ..., "K"
+	beq t0, zero, ace
+	j numero_puro
+ace:
+	la a0, A
+	li a7, 4
+	ecall
+	j segue_loop
+numero_puro:
+	# Aqui exemplo de exibir número puro:
+	mv a0, t0
+	addi a0, a0, 1 # Ajusta o índice com o número da carta
 	li a7, 1
 	ecall
-	# imprime + se não for a última carta
+	j segue_loop
+jack:
+queen:
+king:
+segue_loop:
+	# Exibir sinal de +
 	addi a3, a3, 1
 	blt a3, a4, imprimir_sinal_mais
 	j imprimir_loop
@@ -281,9 +340,12 @@ imprimir_sinal_mais:
 	j imprimir_loop
 
 imprimir_fim:
+	# Exibir o = 
 	la a0, mostra_mao_3
 	li a7, 4
 	ecall
+
+	# Exibir o somatório final (já pronto no s0)
 	mv a0, s0
 	li a7, 1
 	ecall
@@ -298,7 +360,7 @@ empate:
 	la a0, empate_txt
 	li a7, 4
 	ecall
-	j end
+	j inicio
 
 player_venceu:
 	la a0, venceu_txt
@@ -380,4 +442,3 @@ total_cartas_print:
 end:
 	li a7, 10
 	ecall
-
