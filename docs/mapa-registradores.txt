@@ -24,7 +24,7 @@ s6: $cartas_dealer
 s7:
 s8: índice sorteado para imprimir o teste / podemos remover
 s9: imm 52 (usado como count do teste) / podemos remover
-s10:
+s10: imm 21
 s11: imm 1 (usado para fazer comparação dos comandos)
 t3: address baralho_valor
 t4: address baralho_valor + index carta

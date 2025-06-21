@@ -1,6 +1,6 @@
 .data		0x10010000
 baralho_qtd:		.byte	4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
-baralho_valores:	.byte	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10
+baralho_valores:	.byte	11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10
 cartas_player:		.space 20
 cartas_dealer:		.space 20
 inicio_instr:		.string "\n\nBem-vindo(a) ao Blackjack!\nDigite 1 para iniciar:\nDigite 0 para encerrar:\n"
@@ -41,15 +41,15 @@ Q:			.string "Q"
 K:			.string "K"
 
 .text		0x400000
-	li s0, 0 # Somatório jogador
-	li s1, 0 # Somatório dealer
-	li s2, 0 # count player
-	li s3, 0 # count dealer
+	#li s0, 0 # Somatório jogador
+	#li s1, 0 # Somatório dealer
+	#li s2, 0 # count player
+	#li s3, 0 # count dealer
 	la t0, baralho_qtd
 	la t3, baralho_valores
 	li s4, 16 # usado para o dealer encerrar a jogada 
-	la s5, cartas_player
-	la s6, cartas_dealer
+	#la s5, cartas_player
+	#la s6, cartas_dealer
 	li s9, 52 # usado como count do teste
 	li s10, 21
 	li s11, 1# Define o valor 1 para o registrador s11, usado para manusear escolhas
@@ -103,30 +103,28 @@ sortear:
 	mv t5, a0 # Agora passa a salvar o índice sorteado em t5 ao invés do valor
 	ret
 
-valor_do_as: # falta fazer o call
-	la a2, cartas_player
-	lb a3, 0(a2)
-	bne a3, s11, nao_e_um_as
-	# comparar se o as valendo 11 ultrapassa 21 e substituir caso não
-	addi a3, a3, 10
-	add s7, a3, s0
-	bgt s7, s10, super_as_ultrapassa
-	sb a3, 0(a2) # Talvez remover essa parte, pois o 1 é uma carta e pode valer 11
-	addi s0, s0, 10 # Adiciona o somatório
-	# j nao_e_um_as
-
-super_as_ultrapassa: # Rótulo inútil
-nao_e_um_as:
-	addi a2, a2, 1
-	blt a2, s5, valor_do_as
-	ret
 
 dar_carta_jogador:
 	# Valor da carta a partir do índice que está em t5:
 	add t4, t3, t5  # t3 = base de baralho_valores, t5 = índice
 	lb a2, 0(t4)    # a2 = valor da carta  OBSERVAÇÃO: Usado o a2 por falta de vetores temporários
-
 	add s0, s0, a2 # Soma no s0, somatório jogador
+	bne t5, zero, nao_e_as 		# !!!!
+	#Esse tipo de comparação do valor do ás não funciona direito na seguinte ocasião
+	#	Player_recebe_1 : A (vai valer 11 pois a soma não ultrapassa 21)
+	#	Player_recebe_2 : A (Vai valer 1 pois a soma ultrapassa 21)
+	#	Player_recebe_3 : 13 (vai valer 10 e a soma vai ficar 22)
+	#			O primeiro Ás deveria poder alterar seu valor para 1 também, para que a soma fique 12
+	#			A validação do Ás deverá ser feita antes de o jogador perder por ultrapassar 21
+	#			Iterando na memória e comparando se o valor é 11.
+	#			Apagar entre as linhas marcadas com exclamação
+	#
+	bgt s0, s10, diminuir_10
+	j nao_e_as
+diminuir_10:
+	addi s0, s0, -10
+nao_e_as:				# !!!!
+
 
 	# Salvar o índice da carta (não o valor) no vetor cartas_player:
 	sb t5, 0(s5)
@@ -154,6 +152,8 @@ inicio:
 	li s1, 0 # Somatório dealer = 0
 	li s2, 0 # count player = 0
 	li s3, 0 # count dealer = 0
+	la s5, cartas_player
+	la s6, cartas_dealer
 	jal resetar_baralho_qtd
 	la a0, inicio_instr # Bem vindo ao BlackJack, digite 0/1
 	li a7, 4
