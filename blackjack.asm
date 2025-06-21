@@ -109,21 +109,21 @@ dar_carta_jogador:
 	add t4, t3, t5  # t3 = base de baralho_valores, t5 = índice
 	lb a2, 0(t4)    # a2 = valor da carta  OBSERVAÇÃO: Usado o a2 por falta de vetores temporários
 	add s0, s0, a2 # Soma no s0, somatório jogador
-	bne t5, zero, nao_e_as 		# !!!!
-	#Esse tipo de comparação do valor do ás não funciona direito na seguinte ocasião
-	#	Player_recebe_1 : A (vai valer 11 pois a soma não ultrapassa 21)
-	#	Player_recebe_2 : A (Vai valer 1 pois a soma ultrapassa 21)
-	#	Player_recebe_3 : 13 (vai valer 10 e a soma vai ficar 22)
-	#			O primeiro Ás deveria poder alterar seu valor para 1 também, para que a soma fique 12
-	#			A validação do Ás deverá ser feita antes de o jogador perder por ultrapassar 21
-	#			Iterando na memória e comparando se o valor é 11.
-	#			Apagar entre as linhas marcadas com exclamação
-	#
-	bgt s0, s10, diminuir_10
-	j nao_e_as
-diminuir_10:
-	addi s0, s0, -10
-nao_e_as:				# !!!!
+	#bne t5, zero, nao_e_as 		# !!!!
+	##Esse tipo de comparação do valor do ás não funciona direito na seguinte ocasião
+	##	Player_recebe_1 : A (vai valer 11 pois a soma não ultrapassa 21)
+	##	Player_recebe_2 : A (Vai valer 1 pois a soma ultrapassa 21)
+	##	Player_recebe_3 : 13 (vai valer 10 e a soma vai ficar 22)
+	##			O primeiro Ás deveria poder alterar seu valor para 1 também, para que a soma fique 12
+	##			A validação do Ás deverá ser feita antes de o jogador perder por ultrapassar 21
+	##			Iterando na memória e comparando se o valor é 11.
+	##			Apagar entre as linhas marcadas com exclamação
+	##
+	#bgt s0, s10, diminuir_10
+	#j nao_e_as
+#diminuir#_10:
+	#addi s0, s0, -10
+#nao_e_as#:				# !!!!
 
 
 	# Salvar o índice da carta (não o valor) no vetor cartas_player:
@@ -221,6 +221,22 @@ dealer_recebe_2:
 	#
 	j player_escolha
 
+compara_reduzir_soma:
+	addi s0, s0, -10
+	addi a3, a3, 1
+	blt s0, s10, player_escolha
+	beq s0, s10, player_stand
+	#j compara_as
+compara_as:
+	la a2, cartas_player
+	li a3, 1
+	lb a4, 0(a2)
+	addi a4, a4, -1 # usado para comparar o valor com 0 e não usar um registrador com o valor 1
+	beq a4, zero, compara_reduzir_soma
+	beq a3, s2, compara_as_valor_soma
+compara_as_valor_soma:
+	bgt s0, s10, dealer_venceu
+	j player_escolha	
 player_hit:
 	# Adicionar carta a player.mao
 	jal sortear
@@ -234,7 +250,8 @@ player_hit:
 	li a7, 1
 	ecall
 	jal mostrar_mao
-	bgt s0, s10, dealer_venceu
+	#bgt s0, s10, dealer_venceu
+	bgt s0, s10, compara_as  # Compara se podemos diminuir o valor do As antes de dealer_venceu
 	# j playr_escolha
 
 player_escolha:
