@@ -1,10 +1,9 @@
 .data		0x10010000
-baralho_qtd:		.byte	45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 # o reset deixa tudo 4. zerei as quantidades testes
+baralho_qtd:		.byte	4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
 baralho_valores:	.byte	11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10
 cartas_player:		.space 20
 cartas_dealer:		.space 20
-inicio_instr:		.string "\nDigite 1 para iniciar:\nDigite 0 para encerrar:\n"
-bem_vindo:		.string "\n\nBem-vindo(a) ao Blackjack!"
+inicio_instr:		.string "\n\nBem-vindo(a) ao Blackjack!\nDigite 1 para iniciar:\nDigite 0 para encerrar:\n"
 
 escolha:		.string	"\nDigite 1 para pedir mais uma carta ou 0 para parar a jogada.\n"
 vez_do_dealer:		.string "\nVez do dealer."
@@ -18,12 +17,10 @@ mostra_mao_3:		.string	" = "
 player_recebe:		.string "\nPlayer recebe: "
 dealer_recebe:		.string "\nDealer recebe: "
 dealer_esconde:		.string "\nDealer esconde uma carta."
-dealer_revela_msg: 	.string "\nDealer revela a carta escondida: "
-baralho_limite_qtd: 	.string "\nExistem 40 cartas no baralho, a partida será encerrada.\n\n\n"
 
 #dealer_encerra:		.string "\nDealer encerra sua jogada."
 
-total_cartas:		.string "\n\nTotal de Cartas: "
+total_cartas:		.string "\nTotal de Cartas: "
 placar:			.string "\nPontuação: "
 placar_player:		.string "\n	Player: "
 placar_dealer:		.string "\n	Dealer: "
@@ -34,11 +31,9 @@ dealer_pontos:		.word	0
 teste_valores:		.string	"\nA carta de número "
 teste_qtd:		.string	" existe em quantidade: "
 
-venceu_txt:		.string "\n	PLAYER VENCEU\n\n\n"
-perdeu_txt:		.string "\n	DEALER VENCEU\n\n\n"
-empate_txt:		.string "\n	OS JOGADORES EMPATARAM\n\n\n"
-mostrar_soma_player: 	.string "\n\n\n	Soma Player: "
-mostrar_soma_dealer: 	.string "\n	Soma Dealer: "
+venceu_txt:		.string "\nPlayer venceu"
+perdeu_txt:		.string "\nDealer venceu"
+empate_txt:		.string "\nOs jogadores empataram"
 
 A: 			.string "A"
 J:			.string "J"
@@ -46,24 +41,24 @@ Q:			.string "Q"
 K:			.string "K"
 
 .text		0x400000
+	#li s0, 0 # Somatório jogador
+	#li s1, 0 # Somatório dealer
+	#li s2, 0 # count player
+	#li s3, 0 # count dealer
 	la t0, baralho_qtd
 	la t3, baralho_valores
 	li s4, 16 # usado para o dealer encerrar a jogada 
-	li s9, 52 # usado como count do teste
+	#la s5, cartas_player
+	#la s6, cartas_dealer
+
 	li s10, 21
 	li s11, 1# Define o valor 1 para o registrador s11, usado para manusear escolhas
-
-	la a0, bem_vindo # Bem vindo ao BlackJack, digite 0/1
-	li a7, 4
-	ecall
-
 	j inicio
-
 resetar_baralho_qtd:	
 	la t0, baralho_qtd
 	mv a2, t0
 	mv a3, t0
-	addi a3, a3, 13
+	addi a3, a3, 12
 resetar_baralho_qtd_loop:
 	li a0, 4
 	sb a0, 0(a2)
@@ -83,6 +78,7 @@ escolha_comando:
 
 sortear:
 	la t0, baralho_qtd
+	#la t3, baralho_valores
 	# Sorteia o índice de 0-12
 	li a0, 0
 	li a1, 13
@@ -113,35 +109,30 @@ dar_carta_jogador:
 	add t4, t3, t5  # t3 = base de baralho_valores, t5 = índice
 	lb a2, 0(t4)    # a2 = valor da carta  OBSERVAÇÃO: Usado o a2 por falta de vetores temporários
 	add s0, s0, a2 # Soma no s0, somatório jogador
+	#bne t5, zero, nao_e_as 		# !!!!
+	##Esse tipo de comparação do valor do ás não funciona direito na seguinte ocasião
+	##	Player_recebe_1 : A (vai valer 11 pois a soma não ultrapassa 21)
+	##	Player_recebe_2 : A (Vai valer 1 pois a soma ultrapassa 21)
+	##	Player_recebe_3 : 13 (vai valer 10 e a soma vai ficar 22)
+	##			O primeiro Ás deveria poder alterar seu valor para 1 também, para que a soma fique 12
+	##			A validação do Ás deverá ser feita antes de o jogador perder por ultrapassar 21
+	##			Iterando na memória e comparando se o valor é 11.
+	##			Apagar entre as linhas marcadas com exclamação
+	##
+	#bgt s0, s10, diminuir_10
+	#j nao_e_as
+#diminuir#_10:
+	#addi s0, s0, -10
+#nao_e_as#:				# !!!!
 
-	beq t5, zero, conta_as_jogador
-	j verifica_estouro
 
-conta_as_jogador:
-	addi s7, s7, 1 # Contador de As
-	j verifica_estouro
-
-verifica_estouro:
-	# Se a soma passar de 21, e houver As valendo 11, reduz 10 na soma e diminui o contador de As
-	bgt s0, s10, tem_as_para_diminuir
-	j salvar_carta_player
-
-tem_as_para_diminuir:
-	blez s7, salvar_carta_player  #
-	addi s0, s0, -10  # As vira 1
-	addi s7, s7, -1 
-	# Pode ter mais de um As, então verifica de novo
-	bgt s0, s10, tem_as_para_diminuir
-	j salvar_carta_player
-
-salvar_carta_player:
 	# Salvar o índice da carta (não o valor) no vetor cartas_player:
 	sb t5, 0(s5)
 	addi s5, s5, 1  # Avança uma posição no vetor
 	addi s2, s2, 1  # Incrementa o contador de cartas
 	ret
 
-
+	
 dar_carta_dealer:
 	# Obter o valor real da carta:
 	add t4, t3, t5
@@ -150,32 +141,12 @@ dar_carta_dealer:
 	# Soma o valor no total do dealer:
 	add s1, s1, a2
 
-	beq t5, zero, conta_as_dealer # As indice 0, então contar
-	j verifica_estouro_dealer
-
-conta_as_dealer:
-	addi s8, s8, 1 # Contador de As do dealer
-	j verifica_estouro_dealer
-
-verifica_estouro_dealer:
-	# Se a soma do dealer estourar e houver As pra converter de 11 pra 1
-	bgt s1, s10, tem_as_para_diminuir_dealer
-	j salvar_carta_dealer
-
-tem_as_para_diminuir_dealer:
-	blez s8, salvar_carta_dealer  # Se não tem As sobrando, sai
-	addi s1, s1, -10
-	addi s8, s8, -1
-	# Se ainda estiver acima de 21, repete o ajuste
-	bgt s1, s10, tem_as_para_diminuir_dealer
-	j salvar_carta_dealer
-
-salvar_carta_dealer:
 	# Salvar o índice da carta no vetor cartas_dealer:
 	sb t5, 0(s6)
 	addi s6, s6, 1
 	addi s3, s3, 1
 	ret
+
 inicio:	
 	li s0, 0 # Somatório jogador = 0
 	li s1, 0 # Somatório dealer = 0
@@ -183,18 +154,13 @@ inicio:
 	li s3, 0 # count dealer = 0
 	la s5, cartas_player
 	la s6, cartas_dealer
-	li s7, 0 # Contador de Ases jogador = 0
-	li s7, 0 # Contador de Ases dealer = 0
-
 	jal resetar_baralho_qtd
-	
 	la a0, inicio_instr # Bem vindo ao BlackJack, digite 0/1
 	li a7, 4
 	ecall
 	#
 	jal escolha_comando # Retorna comando em t6
 	beq t6, zero, end
-	jal total_cartas_baralho 
 	jal placar_jogo
 	beq t6, s11, player_recebe_1 # inicia o Jogo
 	j inicio	
@@ -252,14 +218,29 @@ dealer_recebe_2:
 	li a0, 10
 	li a7, 11
 	ecall
-	#s
+	#
 	j player_escolha
 
+compara_reduzir_soma:
+	addi s0, s0, -10
+	addi a3, a3, 1
+	blt s0, s10, player_escolha
+	beq s0, s10, player_stand
+	#j compara_as
+compara_as:
+	la a2, cartas_player
+	li a3, 1
+	lb a4, 0(a2)
+	addi a4, a4, -1 # usado para comparar o valor com 0 e não usar um registrador com o valor 1
+	beq a4, zero, compara_reduzir_soma
+	beq a3, s2, compara_as_valor_soma
+compara_as_valor_soma:
+	bgt s0, s10, dealer_venceu
+	j player_escolha	
 player_hit:
 	# Adicionar carta a player.mao
 	jal sortear
 	jal dar_carta_jogador	
-	jal total_cartas_baralho 
 	la a0, player_recebe
 	li a7, 4
 	ecall
@@ -269,14 +250,11 @@ player_hit:
 	li a7, 1
 	ecall
 	jal mostrar_mao
-	
-	beq s0, s10, player_venceu # Valida a vitória com 21
-
-	bgt s0, s10, dealer_venceu # Valida se passou de 21
+	#bgt s0, s10, dealer_venceu
+	bgt s0, s10, compara_as  # Compara se podemos diminuir o valor do As antes de dealer_venceu
 	# j playr_escolha
 
 player_escolha:
-	jal verifica_quarenta # verifica se tem menos de quarenta cartas no baralho
 	la a0, escolha
 	li a7, 4
 	ecall
@@ -297,24 +275,13 @@ player_stand:
 	la a0, vez_do_dealer
 	li a7, 4
 	ecall
-	jal dealer_revela
 	j dealer_escolha
 
 dealer_escolha:
-	jal verifica_quarenta # verifica se tem menos de quarenta cartas no baralho
+	#bgt x5, s4, dealer_stand #x5 vai ser o registrador da pontuação do dealer
 	bgt s1, s4, dealer_stand
-	j dealer_hit
+	#j dealer_hit
 
-dealer_revela: # Usado para revelar a carta escondida na entrada
-	la a0, dealer_revela_msg
-	li a7, 4 
-	ecall
-	la s9, cartas_dealer
-	lb a0, 1(s9) # Carrega a segunda carta entregue
-	addi a0, a0, 1 # índice = valor -1
-	li a7, 1
-	ecall
-	ret
 dealer_hit:
 	jal sortear
 	jal dar_carta_dealer
@@ -406,82 +373,33 @@ compara:
 	bgt s0,s1, player_venceu
 	j dealer_venceu
 
-mostrar_somas:
-	la a0, mostrar_soma_player
-	li a7, 4
-	ecall
-	mv a0, s0
-	li a7, 1
-	ecall
-	
-	la a0, mostrar_soma_dealer
-	li a7, 4
-	ecall
-	mv a0, s1
-	li a7, 1
-	ecall
-	ret
-player_venceu:
-	jal mostrar_somas
-    la a0, venceu_txt
-    li a7, 4
-    ecall
-
-    # atualiza o contador de vitórias
-    la   a0, player_pontos
-    lb   a2, 0(a0)
-    addi a2, a2, 1
-    sb   a2, 0(a0)
-
-    j fim_rodada
-
-dealer_venceu:
-	jal mostrar_somas
-    la a0, perdeu_txt
-    li a7, 4
-    ecall
-
-    la   a0, dealer_pontos
-    lb   a2, 0(a0)
-    addi a2, a2, 1
-    sb   a2, 0(a0)
-
-    j fim_rodada
-
 empate:
-	jal mostrar_somas
-    la a0, empate_txt
-    li a7, 4
-    ecall
-    j fim_rodada
-
-
-verifica_quarenta:
-	li s9, 41 # A função usa um blt para caso a quantidade 40 ocorra na entrega de cartas iniciais
-	la t0, baralho_qtd
-	li a2, 0 # a2 = índice (0 a 12)
-	li a3, 0 # a3 = soma total
-	li a4, 13 # a4 = tamanho do vetor do baralho
-	#j verifica_quarenta_loop
-
-verifica_quarenta_loop:
-	beq a2, a4, verifica_quarenta_fim # fim do loop
-	add a5, t0, a2			# a5 = endereço do baralho_qtd[a2]
-	lb a6, 0(a5)			# a6 = valor em baralho[a2]
-	add a3, a3, a6
-	addi a2, a2, 1
-	j verifica_quarenta_loop
-
-verifica_quarenta_fim:
-	blt a3, s9, verifica_quarenta_mensagem
-	ret
-verifica_quarenta_mensagem:
-	la a0, baralho_limite_qtd
+	la a0, empate_txt
 	li a7, 4
 	ecall
 	j inicio
 
-total_cartas_baralho:
+player_venceu:
+	la a0, venceu_txt
+	li a7, 4
+	ecall
+	la a0, player_pontos
+	lb a2, 0(a0)
+	addi a2, a2, 1
+	sb a2, 0(a0)
+	j inicio
+
+dealer_venceu:
+	la a0, perdeu_txt
+	li a7, 4
+	ecall
+	la a0, dealer_pontos
+	lb a2, 0(a0)
+	addi a2, a2, 1
+	sb a2, 0(a0)
+	j inicio
+
+placar_jogo:
 	la a0, total_cartas
 	li a7, 4
 	ecall
@@ -507,8 +425,9 @@ total_cartas_fim:
 	mv a0, a3
 	li a7, 1
 	ecall
-	ret
-placar_jogo:
+	#j total_cartas_print
+
+total_cartas_print:
         la a0, placar  
 	li a7, 4
 	ecall
@@ -536,14 +455,6 @@ placar_jogo:
 	li a7, 11
 	ecall
 	ret
-
-fim_rodada:
-
-    #jal  placar_jogo
-	#j end
-
-    j    inicio              # se 1, reinicia
-
 
 end:
 	li a7, 10
