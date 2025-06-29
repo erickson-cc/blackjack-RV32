@@ -22,8 +22,6 @@ dealer_esconde:		.string "\nDealer esconde uma carta."
 dealer_revela_msg: 	.string "\nDealer revela a carta escondida: "
 baralho_limite_qtd: 	.string "\nExistem 40 cartas no baralho, a partida será encerrada.\n\n\n"
 
-#dealer_encerra:		.string "\nDealer encerra sua jogada."
-
 total_cartas:		.string "\n\nTotal de Cartas: "
 placar:			.string "\nPontuação: "
 placar_player:		.string "\n	Player: "
@@ -42,15 +40,11 @@ mostrar_soma_player: 	.string "\n\n\n	Soma Player: "
 mostrar_soma_dealer: 	.string "\n	Soma Dealer: "
 
 A: 			.string "A"
-J:			.string "J"
-Q:			.string "Q"
-K:			.string "K"
 
 .text		0x400000
 	la t0, baralho_qtd
 	la t3, baralho_valores
-	li s4, 16 # usado para o dealer encerrar a jogada 
-	li s9, 52 # usado como count do teste
+	li s4, 16 # usado para o dealer encerrar a jogada
 	li s10, 21
 	li s11, 1# Define o valor 1 para o registrador s11, usado para manusear escolhas
 
@@ -60,7 +54,8 @@ K:			.string "K"
 
 	j inicio
 
-resetar_baralho_qtd:	
+# Adiciona 4 cartas a cada índice do baralho_qtd para resetar o baralho
+resetar_baralho_qtd:
 	la t0, baralho_qtd
 	mv a2, t0
 	mv a3, t0
@@ -70,10 +65,9 @@ resetar_baralho_qtd_loop:
 	sb a0, 0(a2)
 	addi a2, a2, 1
 	blt a2, a3, resetar_baralho_qtd_loop
-	
+
 	ret
-		
-	
+
 escolha_comando:
 	# Solicita input do comando
 	li a0, 0
@@ -89,30 +83,24 @@ sortear:
 	li a1, 13
 	li a7, 42 # RandIntRange
 	ecall
-	#
+
 	# verifica se ainda há cartas desse valor
 	add t1, t0, a0
-	lb t2, 0(t1) #--- Load
+	lb t2, 0(t1)
 	beqz t2, sortear # se a qtd = 0, repete função
-	#
+
 	# Subtrair da quantidade da carta no baralho
 	addi t2, t2, -1
 	sb t2, 0(t1) #--- Store
-	#
-	
-	# Adiciona o valor de baralho_valores[t1] em t5
-	#add t4, t3, a0 # t4 = $baralho_valores+index
-	#lb t5, 0(t4) # t5 = valor em baralho_valores[t4]
-	#ret
 
-	mv t5, a0 # Agora passa a salvar o índice sorteado em t5 ao invés do valor
+	mv t5, a0 # Salva o índice sorteado em t5 ao invés do valor da carta
 	ret
 
 
 dar_carta_jogador:
 	# Valor da carta a partir do índice que está em t5:
 	add t4, t3, t5  # t3 = base de baralho_valores, t5 = índice
-	lb a2, 0(t4)    # a2 = valor da carta  OBSERVAÇÃO: Usado o a2 por falta de vetores temporários
+	lb a2, 0(t4)    # a2 = valor da carta
 	add s0, s0, a2 # Soma no s0, somatório jogador
 
 	beq t5, zero, conta_as_jogador
@@ -128,9 +116,9 @@ verifica_estouro:
 	j salvar_carta_player
 
 tem_as_para_diminuir:
-	blez s7, salvar_carta_player  #
+	blez s7, salvar_carta_player
 	addi s0, s0, -10  # As vira 1
-	addi s7, s7, -1 
+	addi s7, s7, -1
 	# Pode ter mais de um As, então verifica de novo
 	bgt s0, s10, tem_as_para_diminuir
 	j salvar_carta_player
@@ -177,7 +165,7 @@ salvar_carta_dealer:
 	addi s6, s6, 1
 	addi s3, s3, 1
 	ret
-inicio:	
+inicio:
 	li s0, 0 # Somatório jogador = 0
 	li s1, 0 # Somatório dealer = 0
 	li s2, 0 # count player = 0
@@ -187,34 +175,29 @@ inicio:
 	li s7, 0 # Contador de Ases jogador = 0
 	li s7, 0 # Contador de Ases dealer = 0
 
-	#jal resetar_baralho_qtd
-	
 	la a0, inicio_instr # Bem vindo ao BlackJack, digite 0/1
 	li a7, 4
 	ecall
-	#
+
 	jal escolha_comando # Retorna comando em t6
 	beq t6, zero, end
-	jal total_cartas_baralho 
+	jal total_cartas_baralho
 	jal placar_jogo
 	beq t6, s11, player_recebe_1 # inicia o Jogo
-	j inicio	
+	j inicio
 
 player_recebe_1:
 	# Adicionar carta a player.mao
-	jal sortear
+	jal sortear # sorteia o índice de uma carta e retorna em t5
 	jal dar_carta_jogador
 	la a0, player_recebe
 	li a7, 4
 	ecall
-	#
+
 	addi t5, t5, 1 # incrementa o índice para se adequar ao número da carta
 	mv a0, t5
 	li a7, 1
 	ecall
-	#
-	# incluir lógica de receber carta aqui (talvez um JAL)
-	# j player_recebe_2
 
 player_recebe_2:
 	# Adicionar carta a player.mao
@@ -223,12 +206,11 @@ player_recebe_2:
 	la a0, player_recebe
 	li a7, 4
 	ecall
-	#
+
 	addi t5, t5, 1 # incrementa o índice para se adequar ao número da carta
 	mv a0, t5
 	li a7, 1
 	ecall
-	# j dealer_recebe_1
 
 dealer_recebe_1:
 	jal sortear
@@ -236,12 +218,11 @@ dealer_recebe_1:
 	la a0, dealer_recebe
 	li a7, 4
 	ecall
-	#
+
 	addi t5, t5, 1 # incrementa o índice para se adequar ao número da carta
 	mv a0, t5
 	li a7, 1
 	ecall
-	# j dealer_recebe_2
 
 dealer_recebe_2:
 	jal sortear
@@ -249,39 +230,38 @@ dealer_recebe_2:
 	la a0, dealer_esconde
 	li a7, 4
 	ecall
-	# imprimir um \n para embelezar
+
 	li a0, 10
 	li a7, 11
 	ecall
-	#s
-	j player_escolha
+
+	beq s0, s10, player_stand # se o jogador tirou 21 passa para o dealer terminar a sua jogada, para depois comparar
+
+	j player_escolha # escolhe se continua ou para a jogada
 
 player_hit:
-	# Adicionar carta a player.mao
 	jal sortear
-	jal dar_carta_jogador	
-	jal total_cartas_baralho 
+	jal dar_carta_jogador
+
 	la a0, player_recebe
 	li a7, 4
 	ecall
-	#
+
 	addi t5, t5, 1 # incrementa o índice para se adequar ao número da carta
 	mv a0, t5
 	li a7, 1
 	ecall
-	
-	beq s0, s10, player_venceu # Valida a vitória com 21
+
+	beq s0, s10, dealer_escolha # Valida a vitória com 21
 
 	bgt s0, s10, dealer_venceu # Valida se passou de 21
-	# j playr_escolha
 
 player_escolha:
 	jal mostrar_mao
-	jal verifica_quarenta # verifica se tem menos de quarenta cartas no baralho
 	la a0, escolha
 	li a7, 4
 	ecall
-	jal escolha_comando
+	jal escolha_comando # retorna em t6 o stand ou hit do jogador
 	beq t6, zero, player_stand
 	beq t6, s11, player_hit
 	j player_escolha
@@ -290,39 +270,39 @@ player_stand:
 	la a0, player_stand_txt
 	li a7, 4
 	ecall
-	#
+
 	mv a0, s0
 	li a7, 1
 	ecall
-	#
+
 	la a0, vez_do_dealer
 	li a7, 4
 	ecall
-	jal dealer_revela
-	j dealer_escolha
+	jal dealer_revela # Revela a carta escondida do dealer
+	j dealer_escolha # Segue com a jogada do dealer
 
 dealer_escolha:
-	jal verifica_quarenta # verifica se tem menos de quarenta cartas no baralho
 	bgt s1, s4, dealer_stand
 	j dealer_hit
 
 dealer_revela: # Usado para revelar a carta escondida na entrada
 	la a0, dealer_revela_msg
-	li a7, 4 
+	li a7, 4
 	ecall
 	la s9, cartas_dealer
 	lb a0, 1(s9) # Carrega a segunda carta entregue
-	addi a0, a0, 1 # índice = valor -1
+	addi a0, a0, 1 # índice = valor +1
 	li a7, 1
 	ecall
 	ret
+
 dealer_hit:
 	jal sortear
 	jal dar_carta_dealer
 	la a0, dealer_recebe
 	li a7, 4
 	ecall
-	#
+
 	addi t5, t5, 1 # incrementa o índice para se adequar ao número da carta
 	mv a0, t5
 	li a7, 1
@@ -334,11 +314,11 @@ dealer_stand:
 	la a0, dealer_stand_txt
 	li a7, 4
 	ecall
-	#
+
 	mv a0, s1
 	li a7, 1
 	ecall
-	#	
+
 	j compara
 
 mostrar_mao_dealer:
@@ -356,11 +336,8 @@ imprimir_loop_dealer:
 
 	# Pega o índice da carta na mão do jogador:
 	add t2, t1, a3
-	lb t0, 0(t2)            # t0 = índice da carta (ex: 0,1,2,...)
+	lb t0, 0(t2)            # t0 = índice da carta
 
-	# Exibir o número da carta (exibe o índice direto ou consulta um vetor de strings)
-	# Por enquanto, só imprime o número puro como estava
-	# Se quiser melhorar depois, podemos usar um vetor de strings tipo "A", "2", ..., "K"
 	beq t0, zero, ace_dealer
 	j numero_puro_dealer
 ace_dealer:
@@ -369,7 +346,6 @@ ace_dealer:
 	ecall
 	j segue_loop_dealer
 numero_puro_dealer:
-	# Aqui exemplo de exibir número puro:
 	mv a0, t0
 	addi a0, a0, 1 # Ajusta o índice com o número da carta
 	li a7, 1
@@ -388,22 +364,22 @@ imprimir_sinal_mais_dealer:
 	j imprimir_loop_dealer
 
 imprimir_fim_dealer:
-	# Exibir o = 
+	# Exibir o =
 	la a0, mostra_mao_3
 	li a7, 4
 	ecall
 
-	# Exibir o somatório final (já pronto no s0)
+	# Exibir o somatório final
 	mv a0, s1
 	li a7, 1
 	ecall
 	ret
 mostrar_mao:
-	la t1, cartas_player    # Base do vetor de cartas do dealer
-	li a3, 0                # Contador de cartas
-	mv a4, s2               # Total de cartas do dealer
+	la t1, cartas_player # Base do vetor de cartas do dealer
+	li a3, 0	         # Contador de cartas
+	mv a4, s2	 	     # Total de cartas do dealer
 
-	# Print da mensagem inicial
+	# Print da mensagem sua mão contém as cartas:
 	la a0, mostra_mao_1
 	li a7, 4
 	ecall
@@ -411,13 +387,10 @@ mostrar_mao:
 imprimir_loop:
 	beq a3, a4, imprimir_fim
 
-	# Pega o índice da carta na mão do jogador:
+	# Pega o índice da carta na mão do jogador
 	add t2, t1, a3
-	lb t0, 0(t2)            # t0 = índice da carta (ex: 0,1,2,...)
+	lb t0, 0(t2) # t0 = índice da carta
 
-	# Exibir o número da carta (exibe o índice direto ou consulta um vetor de strings)
-	# Por enquanto, só imprime o número puro como estava
-	# Se quiser melhorar depois, podemos usar um vetor de strings tipo "A", "2", ..., "K"
 	beq t0, zero, ace
 	j numero_puro
 ace:
@@ -426,15 +399,11 @@ ace:
 	ecall
 	j segue_loop
 numero_puro:
-	# Aqui exemplo de exibir número puro:
 	mv a0, t0
 	addi a0, a0, 1 # Ajusta o índice com o número da carta
 	li a7, 1
 	ecall
 	j segue_loop
-jack:
-queen:
-king:
 segue_loop:
 	# Exibir sinal de +
 	addi a3, a3, 1
@@ -448,30 +417,30 @@ imprimir_sinal_mais:
 	j imprimir_loop
 
 imprimir_fim:
-	# Exibir o = 
+	# Exibir o =
 	la a0, mostra_mao_3
 	li a7, 4
 	ecall
 
-	# Exibir o somatório final (já pronto no s0)
+	# Exibir o somatório final
 	mv a0, s0
 	li a7, 1
 	ecall
 	ret
 
 compara:
-	beq s0, s1, empate
-	bgt s0,s1, player_venceu
-	j dealer_venceu
+	beq s0, s1, empate # Se as somas do somatório do player e delaer são iguais, vai para empate
+	bgt s0,s1, player_venceu # Se o somatório do player é maior que o dealer, vai para player_venceu
+	j dealer_venceu	# Caso contrário, dealer_venceu
 
-mostrar_somas:
+mostrar_somas: # Mostra as somas ao fim da rodada
 	la a0, mostrar_soma_player
 	li a7, 4
 	ecall
 	mv a0, s0
 	li a7, 1
 	ecall
-	
+
 	la a0, mostrar_soma_dealer
 	li a7, 4
 	ecall
@@ -503,6 +472,7 @@ dealer_venceu:
     li a7, 4
     ecall
 
+    # atualiza o contador de vitórias do dealer
     la   a0, dealer_pontos
     lb   a2, 0(a0)
     addi a2, a2, 1
@@ -526,7 +496,6 @@ verifica_quarenta:
 	li a2, 0 # a2 = índice (0 a 12)
 	li a3, 0 # a3 = soma total
 	li a4, 13 # a4 = tamanho do vetor do baralho
-	#j verifica_quarenta_loop
 
 verifica_quarenta_loop:
 	beq a2, a4, verifica_quarenta_fim # fim do loop
@@ -550,15 +519,12 @@ total_cartas_baralho:
 	la a0, total_cartas
 	li a7, 4
 	ecall
-	# Incluir em algum registrador um count com o total de cartas
-	j total_cartas_num # jump desnecessário
 
 total_cartas_num:
 	la t0, baralho_qtd
 	li a2, 0 # a2 = índice (0 a 12)
 	li a3, 0 # a3 = soma total
 	li a4, 13 # a4 = tamanho do vetor do baralho
-	#j total_cartas_loop
 
 total_cartas_loop:
 	beq a2, a4, total_cartas_fim	# se o índice == tamanho do vetor
@@ -574,40 +540,40 @@ total_cartas_fim:
 	ecall
 	ret
 placar_jogo:
-        la a0, placar  
+    la a0, placar
 	li a7, 4
 	ecall
-        la a0, placar_player
+    la a0, placar_player
 	li a7, 4
 	ecall
-	#
+
 	la a0, player_pontos
 	lb a2, 0(a0)
 	mv a0, a2
 	li a7, 1
 	ecall
-	#
-        la a0, placar_dealer
+
+    la a0, placar_dealer
 	li a7, 4
 	ecall
-	#
+
 	la a0, dealer_pontos
 	lb a2, 0(a0)
 	mv a0, a2
 	li a7, 1
 	ecall
-	#
+
 	li a0, 10
 	li a7, 11
 	ecall
 	ret
 
 fim_rodada:
-
+	jal verifica_quarenta # verifica se tem menos de quarenta cartas no baralho
+	jal total_cartas_baralho
     jal  placar_jogo
-	#j end
 
-    j    inicio              # se 1, reinicia
+    j    inicio
 
 
 end:
