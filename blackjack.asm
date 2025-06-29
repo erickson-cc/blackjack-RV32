@@ -1,5 +1,5 @@
 .data		0x10010000
-baralho_qtd:		.byte	45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 # o reset deixa tudo 4. zerei as quantidades testes
+baralho_qtd:		.byte	4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 
 baralho_valores:	.byte	11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10
 cartas_player:		.space 20
 cartas_dealer:		.space 20
@@ -11,7 +11,8 @@ vez_do_dealer:		.string "\nVez do dealer."
 player_stand_txt:	.string "\nPlayer encerra sua jogada com a mão: "	
 dealer_stand_txt:	.string "\nDealer encerra sua jogada com a mão: "	
 
-mostra_mao_1:		.string	"\nSua mão contém as cartas: "
+mostra_mao_1:		.string	"\n\nSua mão contém as cartas: "
+mostra_mao_d:		.string "\nA mão do dealer contém as cartas: "
 mostra_mao_2:		.string " + "
 mostra_mao_3:		.string	" = "
 
@@ -186,7 +187,7 @@ inicio:
 	li s7, 0 # Contador de Ases jogador = 0
 	li s7, 0 # Contador de Ases dealer = 0
 
-	jal resetar_baralho_qtd
+	#jal resetar_baralho_qtd
 	
 	la a0, inicio_instr # Bem vindo ao BlackJack, digite 0/1
 	li a7, 4
@@ -268,7 +269,6 @@ player_hit:
 	mv a0, t5
 	li a7, 1
 	ecall
-	jal mostrar_mao
 	
 	beq s0, s10, player_venceu # Valida a vitória com 21
 
@@ -276,6 +276,7 @@ player_hit:
 	# j playr_escolha
 
 player_escolha:
+	jal mostrar_mao
 	jal verifica_quarenta # verifica se tem menos de quarenta cartas no baralho
 	la a0, escolha
 	li a7, 4
@@ -340,10 +341,67 @@ dealer_stand:
 	#	
 	j compara
 
-mostrar_mao:
-	la t1, cartas_player    # Base do vetor de cartas do jogador
+mostrar_mao_dealer:
+	la t1, cartas_dealer    # Base do vetor de cartas do dealer
 	li a3, 0                # Contador de cartas
-	mv a4, s2               # Total de cartas do jogador
+	mv a4, s3               # Total de cartas do dealer
+
+	# Print da mensagem inicial
+	la a0, mostra_mao_d
+	li a7, 4
+	ecall
+
+imprimir_loop_dealer:
+	beq a3, a4, imprimir_fim_dealer
+
+	# Pega o índice da carta na mão do jogador:
+	add t2, t1, a3
+	lb t0, 0(t2)            # t0 = índice da carta (ex: 0,1,2,...)
+
+	# Exibir o número da carta (exibe o índice direto ou consulta um vetor de strings)
+	# Por enquanto, só imprime o número puro como estava
+	# Se quiser melhorar depois, podemos usar um vetor de strings tipo "A", "2", ..., "K"
+	beq t0, zero, ace_dealer
+	j numero_puro_dealer
+ace_dealer:
+	la a0, A
+	li a7, 4
+	ecall
+	j segue_loop_dealer
+numero_puro_dealer:
+	# Aqui exemplo de exibir número puro:
+	mv a0, t0
+	addi a0, a0, 1 # Ajusta o índice com o número da carta
+	li a7, 1
+	ecall
+	j segue_loop_dealer
+segue_loop_dealer:
+	# Exibir sinal de +
+	addi a3, a3, 1
+	blt a3, a4, imprimir_sinal_mais_dealer
+	j imprimir_loop_dealer
+
+imprimir_sinal_mais_dealer:
+	la a0, mostra_mao_2
+	li a7, 4
+	ecall
+	j imprimir_loop_dealer
+
+imprimir_fim_dealer:
+	# Exibir o = 
+	la a0, mostra_mao_3
+	li a7, 4
+	ecall
+
+	# Exibir o somatório final (já pronto no s0)
+	mv a0, s1
+	li a7, 1
+	ecall
+	ret
+mostrar_mao:
+	la t1, cartas_player    # Base do vetor de cartas do dealer
+	li a3, 0                # Contador de cartas
+	mv a4, s2               # Total de cartas do dealer
 
 	# Print da mensagem inicial
 	la a0, mostra_mao_1
@@ -422,6 +480,8 @@ mostrar_somas:
 	ecall
 	ret
 player_venceu:
+	jal mostrar_mao
+	jal mostrar_mao_dealer
 	jal mostrar_somas
     la a0, venceu_txt
     li a7, 4
@@ -436,6 +496,8 @@ player_venceu:
     j fim_rodada
 
 dealer_venceu:
+	jal mostrar_mao
+	jal mostrar_mao_dealer
 	jal mostrar_somas
     la a0, perdeu_txt
     li a7, 4
@@ -449,6 +511,8 @@ dealer_venceu:
     j fim_rodada
 
 empate:
+	jal mostrar_mao
+	jal mostrar_mao_dealer
 	jal mostrar_somas
     la a0, empate_txt
     li a7, 4
@@ -457,7 +521,7 @@ empate:
 
 
 verifica_quarenta:
-	li s9, 41 # A função usa um blt para caso a quantidade 40 ocorra na entrega de cartas iniciais
+	li s9, 13 # A função usa um blt para caso a quantidade 40 ocorra na entrega de cartas iniciais
 	la t0, baralho_qtd
 	li a2, 0 # a2 = índice (0 a 12)
 	li a3, 0 # a3 = soma total
@@ -472,13 +536,14 @@ verifica_quarenta_loop:
 	addi a2, a2, 1
 	j verifica_quarenta_loop
 
-verifica_quarenta_fim:
+verifica_quarenta_fim: #Retorna normalmente
 	blt a3, s9, verifica_quarenta_mensagem
 	ret
 verifica_quarenta_mensagem:
 	la a0, baralho_limite_qtd
 	li a7, 4
 	ecall
+	jal resetar_baralho_qtd
 	j inicio
 
 total_cartas_baralho:
@@ -539,7 +604,7 @@ placar_jogo:
 
 fim_rodada:
 
-    #jal  placar_jogo
+    jal  placar_jogo
 	#j end
 
     j    inicio              # se 1, reinicia
